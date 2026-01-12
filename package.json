@@ -1,12 +1,14 @@
 {
   "name": "domaine-de-pipangaille-scraper",
-  "version": "1.0.0",
-  "description": "Scraper pour récupérer les informations des clients séjournant au Domaine de Pipangaille",
-  "main": "src/index.js",
+  "version": "2.0.0",
+  "description": "REST API for Domaine de Pipangaille guest information (Home Assistant integration)",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "scrape": "node src/index.js"
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "scrape": "node src/cli.js",
+    "api": "node src/server.js"
   },
   "keywords": [
     "scraping",
@@ -16,7 +18,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "node-cache": "^5.1.2",
     "puppeteer": "^24.35.0",
     "puppeteer-core": "^24.35.0"
   }
