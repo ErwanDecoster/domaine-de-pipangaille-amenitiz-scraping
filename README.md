@@ -28,8 +28,8 @@ This project uses **Puppeteer** (Chromium headless) to scrape reservation data f
 
 1. **Clone the repository :**
    ```bash
-   git clone https://github.com/erwandecoster/domaine-de-pipangaille-rooms-scraping.git
-   cd domaine-de-pipangaille-rooms-scraping
+   git clone https://github.com/erwandecoster/domaine-de-pipangaille-amenitiz-scraping.git
+   cd domaine-de-pipangaille-amenitiz-scraping
    ```
 
 2. **Build the Docker image :**
@@ -349,4 +349,4 @@ ISC
 ---
 
 **Developed for :** Domaine de Pipangaille  
-**GitHub :** https://github.com/erwandecoster/domaine-de-pipangaille-rooms-scraping
+**GitHub :** https://github.com/erwandecoster/domaine-de-pipangaille-amenitiz-scraping

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "slug": "domaine-pipangaille-guest-manager",
   "description": "Retrieve guest information from Amenitiz booking platform with REST API for Home Assistant integration",
-  "url": "https://github.com/erwandecoster/domaine-de-pipangaille-rooms-scraping",
+  "url": "https://github.com/erwandecoster/domaine-de-pipangaille-amenitiz-scraping",
   "startup": "application",
   "boot": "auto",
   "ports": {
@@ -47,5 +47,5 @@
     "config:rw",
     "data:rw"
   ],
-  "documentation": "https://github.com/erwandecoster/domaine-de-pipangaille-rooms-scraping/blob/main/README.md"
+  "documentation": "https://github.com/erwandecoster/domaine-de-pipangaille-amenitiz-scraping/blob/main/README.md"
 }
