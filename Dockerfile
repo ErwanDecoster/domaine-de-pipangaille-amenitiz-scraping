@@ -1,4 +1,4 @@
-ARG BUILD_FROM=node:20-alpine
+ARG BUILD_FROM=node:24-alpine
 FROM ${BUILD_FROM}
 
 # Install additional dependencies
@@ -29,7 +29,7 @@ RUN chmod +x /run.sh
 
 # Health check
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+  CMD sh -c "node -e \"const p = process.env.PORT || 3000; require('http').get(\\`http://localhost:${p}/api/health\\`, (r) => { if (r.statusCode !== 200) throw new Error(r.statusCode); }).on('error', (e) => { throw e; });\""
 
 # Set environment
 ENV NODE_ENV=production

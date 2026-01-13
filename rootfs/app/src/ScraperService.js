@@ -244,6 +244,32 @@ export class ScraperService {
     return guests;
   }
 
+  async cleanupData() {
+    if (!DATA_RETENTION_DAYS || DATA_RETENTION_DAYS <= 0) {
+      return;
+    }
+
+    const cutoffMs = Date.now() - DATA_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const targets = [DATA_DIR, SCREENSHOT_DIR];
+
+    targets.forEach(dir => {
+      if (!fs.existsSync(dir)) return;
+
+      fs.readdirSync(dir).forEach(entry => {
+        const fullPath = path.join(dir, entry);
+        try {
+          const stats = fs.statSync(fullPath);
+          if (stats.isFile() && stats.mtimeMs < cutoffMs) {
+            fs.unlinkSync(fullPath);
+          }
+        } catch (err) {
+          // Ignore cleanup errors to avoid failing the scrape
+          console.warn(`[WARN] Cleanup skipped for ${fullPath}: ${err.message}`);
+        }
+      });
+    });
+  }
+
   async close() {
     if (this.browser) {
       await this.browser.close();
@@ -257,6 +283,7 @@ export class ScraperService {
       await this.initialize();
       await this.login(twoFACodeProvider);
       const guests = await this.fetchGuests();
+      await this.cleanupData();
       return guests;
     } finally {
       await this.close();
