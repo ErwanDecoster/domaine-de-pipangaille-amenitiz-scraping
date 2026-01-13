@@ -1,8 +1,10 @@
-ARG BUILD_FROM=node:24-alpine
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Install additional dependencies
+# Install Node.js and additional dependencies
 RUN apk add --no-cache \
+  nodejs \
+  npm \
   jq \
   ca-certificates \
   chromium \
