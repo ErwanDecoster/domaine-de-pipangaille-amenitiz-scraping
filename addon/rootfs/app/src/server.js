@@ -4,9 +4,22 @@ import cors from 'cors';
 import NodeCache from 'node-cache';
 import { ScraperService } from './ScraperService.js';
 import readline from 'readline';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Data directories (Home Assistant addon compatible)
+const DATA_DIR = process.env.DATA_DIR || '/data/data';
+const SESSION_DIR = process.env.SESSION_DIR || '/data/session';
+
+// Ensure directories exist
+[DATA_DIR, SESSION_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 // Cache with 10-minute TTL (600 seconds)
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
@@ -94,12 +107,13 @@ async function prompt2FACode(errorMessage = null) {
  */
 async function refreshData() {
   if (isRefreshing) {
-    console.log('Refresh already in progress, skipping...');
+    console.log('[INFO] Refresh already in progress, skipping...');
     return;
   }
 
   isRefreshing = true;
-  console.log(`[${new Date().toISOString()}] Starting data refresh...`);
+  const startTime = new Date().toISOString();
+  console.log(`[${startTime}] Starting data refresh...`);
 
   try {
     const scraper = new ScraperService({
@@ -130,7 +144,7 @@ async function refreshData() {
       message: error.message,
       timestamp: new Date().toISOString()
     };
-    console.error(`[${new Date().toISOString()}] Refresh failed:`, error.message);
+    console.error(`[${new Date().toISOString()}] Refresh failed: ${error.message}`);
     
     // Clear 2FA state on failure
     if (twoFATimeoutId) {
@@ -281,25 +295,42 @@ app.post('/api/refresh', async (req, res) => {
   refreshData();
 });
 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('[INFO] SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('[INFO] Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('[INFO] SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('[INFO] Server closed');
+    process.exit(0);
+  });
+});
+
 // Start server
-app.listen(port, async () => {
-  console.log(`Server running on http://localhost:${port}`);
-  console.log(`Auto-refresh interval: ${REFRESH_INTERVAL / 1000} seconds (10 minutes)`);
-  console.log('');
-  console.log('Available endpoints:');
-  console.log(`  GET  http://localhost:${port}/api/guests   - Get all guests`);
-  console.log(`  GET  http://localhost:${port}/api/rooms    - Get guests by room`);
-  console.log(`  GET  http://localhost:${port}/api/status   - Get server status`);
-  console.log(`  GET  http://localhost:${port}/api/health   - Health check`);
-  console.log(`  POST http://localhost:${port}/api/refresh  - Force refresh`);
-  console.log(`  POST http://localhost:${port}/api/2fa      - Submit 2FA code`);
-  console.log('');
+const server = app.listen(port, async () => {
+  console.log(`[INFO] Server running on http://localhost:${port}`);
+  console.log(`[INFO] Auto-refresh interval: ${REFRESH_INTERVAL / 1000} seconds (10 minutes)`);
+  console.log('[INFO] Available endpoints:');
+  console.log(`[INFO]   GET  http://localhost:${port}/api/guests   - Get all guests`);
+  console.log(`[INFO]   GET  http://localhost:${port}/api/rooms    - Get guests by room`);
+  console.log(`[INFO]   GET  http://localhost:${port}/api/status   - Get server status`);
+  console.log(`[INFO]   GET  http://localhost:${port}/api/health   - Health check`);
+  console.log(`[INFO]   POST http://localhost:${port}/api/refresh  - Force refresh`);
+  console.log(`[INFO]   POST http://localhost:${port}/api/2fa      - Submit 2FA code`);
   
   // Initial data fetch
-  console.log('Starting initial data fetch...');
+  console.log('[INFO] Starting initial data fetch...');
   await refreshData();
   
   // Set up auto-refresh interval
   setInterval(refreshData, REFRESH_INTERVAL);
-  console.log('Auto-refresh scheduled');
+  console.log('[INFO] Auto-refresh scheduled');
 });
+
+export default app;

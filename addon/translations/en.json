@@ -1,0 +1,38 @@
+{
+  "en": {
+    "configuration": {
+      "amenitiz_email": "Amenitiz Email",
+      "amenitiz_password": "Amenitiz Password",
+      "port": "API Port",
+      "headless": "Headless Mode",
+      "screenshot": "Enable Screenshots",
+      "data_retention_days": "Data Retention Days"
+    },
+    "configuration_description": {
+      "amenitiz_email": "Your Amenitiz account email address",
+      "amenitiz_password": "Your Amenitiz account password (stored securely in Home Assistant)",
+      "port": "Port for the REST API (default: 3000)",
+      "headless": "Run Chromium in headless mode (recommended: enabled)",
+      "screenshot": "Save screenshots for debugging (recommended: disabled)",
+      "data_retention_days": "Keep exported data files for N days (0 = disable cleanup)"
+    }
+  },
+  "fr": {
+    "configuration": {
+      "amenitiz_email": "Email Amenitiz",
+      "amenitiz_password": "Mot de passe Amenitiz",
+      "port": "Port API",
+      "headless": "Mode sans interface",
+      "screenshot": "Activer les captures d'écran",
+      "data_retention_days": "Jours de rétention des données"
+    },
+    "configuration_description": {
+      "amenitiz_email": "Adresse email de votre compte Amenitiz",
+      "amenitiz_password": "Mot de passe de votre compte Amenitiz (stocké de manière sécurisée)",
+      "port": "Port pour l'API REST (par défaut : 3000)",
+      "headless": "Exécuter Chromium sans interface (recommandé : activé)",
+      "screenshot": "Enregistrer les captures d'écran pour le débogage (recommandé : désactivé)",
+      "data_retention_days": "Garder les fichiers de données exportés pendant N jours (0 = désactiver le nettoyage)"
+    }
+  }
+}

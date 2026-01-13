@@ -1,0 +1,15 @@
+#!/command/execlineb -P
+# Service run script for Home Assistant addon using s6-overlay
+
+multisubstitute
+{
+  importas -i PORT PORT
+}
+
+foreground
+{
+  echo "Starting Domaine de Pipangaille Guest Manager on port ${PORT}"
+}
+
+cd /app
+exec -c node src/server.js

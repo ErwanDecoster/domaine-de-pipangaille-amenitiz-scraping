@@ -5,13 +5,16 @@ import path from 'path';
 import { SessionManager } from './SessionManager.js';
 
 const AMENITIZ_LOGIN_URL = 'https://domaine-de-pipangaille.amenitiz.io/fr/admin/dashboard';
-const SCREENSHOT_DIR = './screenshots';
+const DATA_DIR = process.env.DATA_DIR || '/data/data';
+const SESSION_DIR = process.env.SESSION_DIR || '/data/session';
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR || '/data/screenshots';
+const DATA_RETENTION_DAYS = parseInt(process.env.DATA_RETENTION_DAYS) || 7;
 
 export class ScraperService {
   constructor(options = {}) {
     this.browser = null;
     this.page = null;
-    this.sessionManager = new SessionManager();
+    this.sessionManager = new SessionManager(SESSION_DIR);
     this.headless = options.headless ?? (process.env.HEADLESS === 'true');
     this.screenshot = options.screenshot ?? (process.env.SCREENSHOT === 'true');
   }
@@ -34,12 +37,23 @@ export class ScraperService {
       fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
     }
 
-    this.browser = await puppeteer.launch({
+    const launchOptions = {
       headless: this.headless,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage'
+      ],
       defaultViewport: { width: 1920, height: 1080 }
-    });
+    };
 
+    // Use system Chromium if available (addon environment)
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    this.browser = await puppeteer.launch(launchOptions);
     this.page = await this.browser.newPage();
     await this.page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -50,7 +64,7 @@ export class ScraperService {
     const { AMENITIZ_EMAIL: email, AMENITIZ_PASSWORD: password } = process.env;
 
     if (!email || !password) {
-      throw new Error('AMENITIZ_EMAIL and AMENITIZ_PASSWORD must be defined in .env file');
+      throw new Error('AMENITIZ_EMAIL and AMENITIZ_PASSWORD must be defined');
     }
 
     await this.page.goto(AMENITIZ_LOGIN_URL, { waitUntil: 'networkidle2' });
