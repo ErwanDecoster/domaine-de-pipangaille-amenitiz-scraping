@@ -1,10 +1,3 @@
-node_modules/
+rootfs/app/node_modules/
+rootfs/app/package-lock.json
 .env
-*.log
-data/
-screenshots/
-session/
-.DS_Store
-
-# API server port (default: 3000)
-PORT=3000

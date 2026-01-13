@@ -1,383 +1,329 @@
-# Domaine de Pipangaille - Guest Information System
+# Domaine de Pipangaille - Guest Manager (Home Assistant Addon)
 
-Automated system to retrieve guest information from Amenitiz booking platform. Available as both CLI tool and REST API for Home Assistant integration.
+Home Assistant addon for retrieving guest information from Amenitiz booking platform via REST API. Perfect for home automation workflows and dashboard integrations.
 
-## 📋 Features
+## ✨ Features
 
-- ✅ Automatic login to Amenitiz dashboard
-- ✅ **Two-factor authentication (2FA) handling**
-- ✅ **Persistent session to avoid 2FA on every run**
-- ✅ Retrieval of current guests from arrivals page
-- ✅ **REST API with 10-minute auto-refresh**
-- ✅ **Home Assistant integration ready**
-- ✅ Export data in JSON and TXT formats (CLI mode)
-- ✅ Optional screenshots for debugging
-- ✅ Headless or visible browser mode
-- ✅ Optimized and clean codebase
+- 🔗 **REST API** - Easy integration with Home Assistant
+- 🔄 **Auto-refresh** - Updates every 10 minutes automatically
+- 🔐 **Secure credentials** - Stored safely in Home Assistant secrets
+- 🏠 **Home Assistant native** - UI configuration, logs, and health checks
+- 📊 **Multiple data views** - All guests, by room, or room summary
+- 🧹 **Automatic cleanup** - Old data files deleted automatically
+- 🛡️ **Persistent sessions** - Avoids repeated 2FA prompts
+- 📱 **Docker ready** - Works on all Home Assistant platforms (amd64, armv7, arm64, armhf)
 
-## 🚀 Quick Start
+## 🚀 Installation
 
-### 1. Installation
+### 1. Add Repository to Home Assistant
 
-```bash
-cd domaine-de-pipangaille-rooms-scraping
-npm install
+Open Home Assistant and go to:
+**Settings > Devices & Services > Integrations > Create Automation > Developer tools**
+
+Or use this link:
+```
+homeassistant://add-addon-repository/url/https://github.com/yourusername/domaine-de-pipangaille-rooms-scraping
 ```
 
-### 2. Configuration
+### 2. Install the Addon
 
-Copy the example file:
-```bash
-cp .env.example .env
+1. Go to **Settings > Add-ons > Add-on Store**
+2. Search for "Domaine de Pipangaille"
+3. Click **Install**
+4. Wait for download and installation (2-5 minutes depending on your hardware)
+
+### 3. Configure Addon
+
+1. Open addon settings
+2. Enter your **Amenitiz Email** and **Password**
+3. Optionally adjust:
+   - **Port**: 3000 (default)
+   - **Headless mode**: true (recommended)
+   - **Screenshots**: false (for debugging only)
+   - **Data retention**: 7 days (0 to disable cleanup)
+4. Click **Save**
+
+### 4. Start the Addon
+
+Click the **Start** button and wait 30-60 seconds for:
+- Initial Amenitiz login
+- First data fetch (may prompt for 2FA)
+- API server ready
+
+Check logs for successful startup:
+```
+[INFO] Server running on http://localhost:3000
+[INFO] Data refreshed successfully: X guests found
 ```
 
-Edit `.env` with your credentials:
-```env
-AMENITIZ_EMAIL=your-email@example.com
-AMENITIZ_PASSWORD=your-password
-HEADLESS=true
-SCREENSHOT=false
-PORT=3000
-```
+## 📡 API Endpoints
 
-### 3. Start the API Server
+All endpoints are available at `http://homeassistant.local:3000`:
 
-```bash
-npm start
-```
+### `GET /api/guests`
+Returns all guests checking in today.
 
-The server will:
-- Start on port 3000
-- Fetch initial data
-- Auto-refresh every 10 minutes
-- Expose REST API endpoints
-
-**API Endpoints:**
-- `GET /api/guests` - All guests checking in today
-- `GET /api/rooms` - Guests grouped by room type
-- `GET /api/status` - Server and cache status
-- `GET /api/health` - Health check
-- `POST /api/refresh` - Force manual refresh
-
-📖 **Full API documentation:** See [API.md](API.md)
-
-### 4. CLI Mode (Manual Scraping)
-
-```bash
-npm run scrape
-```
-
-Outputs:
-- `data/guests-YYYY-MM-DD.json`
-- `data/guests-YYYY-MM-DD.txt`
-
-## 🏠 Home Assistant Integration
-
-Add to your `configuration.yaml`:
-
-```yaml
-sensor:
-  - platform: rest
-    name: "Pipangaille Guests"
-    resource: "http://YOUR_SERVER_IP:3000/api/guests"
-    method: GET
-    scan_interval: 600  # 10 minutes
-    value_template: "{{ value_json.count }}"
-    json_attributes:
-      - guests
-      - lastRefreshTime
-```
-
-The API automatically refreshes data every 10 minutes.
-
-📖 **Complete Home Assistant examples:** See [API.md](API.md)
-
-## 🔐 Two-Factor Authentication (2FA)
-
-The system automatically handles Amenitiz's two-factor authentication:
-
-### **First Run** (with 2FA code)
-
-On the first login, you'll be prompted for the 2FA code received by email:
-
-
-```bash
-npm start
-# The script will prompt: "🔐 2FA code received by email: "
-# Enter the code (e.g., 687999)
-```
-
-### **Subsequent Runs** (without 2FA code)
-
-After the first successful login:
-- ✅ The session is **automatically saved** in `session/cookies.json`
-- ✅ Next executions will **reuse this session**
-- ✅ **No new 2FA code will be requested** as long as the session is valid
-
-The session remains valid for several days/weeks depending on Amenitiz's configuration.
-
-### Session Management
-
-If the session expires or you want to reconnect:
-```bash
-# Delete the saved session
-rm -rf session/
-
-# Then restart the API/CLI (a new 2FA code will be requested)
-npm start
-```
-
-## 💻 Usage Modes
-
-### API Mode (Recommended for Home Assistant)
-
-```bash
-npm start
-```
-
-The API server will:
-- Start and listen on port 3000
-- Perform initial data fetch (may prompt for 2FA)
-- Auto-refresh every 10 minutes in the background
-- Serve data via REST endpoints
-
-Access the API:
-```bash
-curl http://localhost:3000/api/guests
-curl http://localhost:3000/api/status
-```
-
-### CLI Mode (One-time Scraping)
-
-```bash
-npm run scrape
-```
-
-Performs a single scrape and outputs to:
-- `data/guests-YYYY-MM-DD.json` - Structured data
-- `data/guests-YYYY-MM-DD.txt` - Simple guest list
-
-## ⚙️ Configuration Options
-
-In the `.env` file:
-
-- `AMENITIZ_EMAIL`: Amenitiz login email (required)
-- `AMENITIZ_PASSWORD`: Password (required)
-- `HEADLESS`: `true` for invisible mode, `false` to see the browser
-- `SCREENSHOT`: `true` to capture screenshots at each step
-- `PORT`: API server port (default: 3000)
-- `DATA_RETENTION_DAYS`: Keep exported files for N days, older files are automatically deleted (default: 7, set to 0 to disable)
-
-## 📊 Data Format
-
-### API Response Example
-
+**Response:**
 ```json
 {
   "guests": [
     {
-      "name": "Jean Dupont",
-      "roomType": "Chambre Marocaine",
+      "name": "John Doe",
+      "roomType": "Double Room",
       "persons": "2",
-      "amountDue": "0 €",
-      "dates": "12/01/2026 - 14/01/2026"
+      "amountDue": "150.00 €",
+      "dates": "01/01/2026 - 03/01/2026"
     }
   ],
   "count": 1,
-  "lastRefreshTime": "2024-01-01T10:00:00.000Z",
-  "nextRefreshIn": 600
+  "lastRefreshTime": "2026-01-13T10:00:00.000Z",
+  "nextRefreshIn": 300
 }
 ```
 
-### CLI Output Files
+### `GET /api/rooms`
+Returns guests grouped by room type.
 
-JSON format: `data/guests-YYYY-MM-DD.json`
+**Response:**
 ```json
-[
-  {
-    "name": "Jean Dupont",
-    "roomType": "Chambre Marocaine",
-    "persons": "2",
-    "amountDue": "0 €",
-    "dates": "12/01/2026 - 14/01/2026"
-  }
-]
+{
+  "rooms": {
+    "Double Room": [
+      {
+        "name": "John Doe",
+        "persons": "2",
+        "dates": "01/01/2026 - 03/01/2026",
+        "amountDue": "150.00 €"
+      }
+    ]
+  },
+  "lastRefreshTime": "2026-01-13T10:00:00.000Z",
+  "nextRefreshIn": 300
+}
 ```
 
-TXT format: `data/guests-YYYY-MM-DD.txt`
-```
-Name: Jean Dupont | Room: Chambre Marocaine | Persons: 2 | Amount: 0 € | Dates: 12/01/2026 - 14/01/2026
-```
+### `GET /api/status`
+Returns server and cache status.
 
-**Automatic Cleanup:** Files older than 7 days (configurable via `DATA_RETENTION_DAYS` in `.env`) are automatically deleted each time you run the scraper. Set `DATA_RETENTION_DAYS=0` to disable cleanup.
-
-## 🔧 Debugging
-
-To debug the scraper:
-
-1. Enable visual mode (see browser actions):
-   ```env
-   HEADLESS=false
-   ```
-
-2. Enable screenshots:
-   ```env
-   SCREENSHOT=true
-   ```
-   
-   Screenshots will be saved in `screenshots/`
-
-## 🚀 Production Deployment
-
-### Using PM2 (Recommended)
-
-```bash
-npm install -g pm2
-pm2 start src/server.js --name pipangaille-api
-pm2 save
-pm2 startup
+**Response:**
+```json
+{
+  "status": "running",
+  "isRefreshing": false,
+  "lastRefreshTime": "2026-01-13T10:00:00.000Z",
+  "nextRefreshIn": 300,
+  "cacheStatus": "ready",
+  "guestCount": 5,
+  "lastError": null
+}
 ```
 
-Monitor:
-```bash
-pm2 logs pipangaille-api
-pm2 status
+### `GET /api/health`
+Health check endpoint (useful for monitoring).
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "uptime": 3600,
+  "timestamp": "2026-01-13T10:00:00.000Z"
+}
 ```
 
-### Using systemd
+### `POST /api/refresh`
+Force a manual data refresh (non-blocking).
 
-See [API.md](API.md) for complete systemd configuration.
-
-## ⚠️ Important Notes
-
-- **Security**: 
-  - Never commit the `.env` file containing your credentials
-  - Never commit the `session/` folder containing cookies
-  - Sensitive files are already in `.gitignore`
-  - **Local network only**: Do not expose API to the internet
-- **Session**: The saved session allows bypassing 2FA but must be protected
-- **Usage**: This tool is intended for legitimate personal/professional use
-- **Maintenance**: If Amenitiz modifies its interface, CSS selectors may need updates
-
-## 🛠️ Architecture
-
-### Files
-
-```
-domaine-de-pipangaille-rooms-scraping/
-├── src/
-│   ├── server.js          # REST API server with auto-refresh
-│   ├── cli.js             # CLI scraper (manual usage)
-│   ├── ScraperService.js  # Reusable scraping logic
-│   └── SessionManager.js  # Persistent session management
-├── data/                  # Export folder (CLI mode)
-├── screenshots/           # Screenshots (if enabled)
-├── session/               # Saved cookies
-├── .env                   # Credentials (not committed)
-├── .env.example           # Configuration template
-├── README.md              # This file
-├── API.md                 # API documentation
-└── package.json           # Project dependencies
+**Response:**
+```json
+{
+  "message": "Refresh started",
+  "timestamp": "2026-01-13T10:00:00.000Z"
+}
 ```
 
-### How It Works
+## 🏠 Home Assistant Integration
 
-1. **ScraperService** - Core browser automation:
-   - Launches Puppeteer browser
-   - Handles login and 2FA
-   - Navigates to arrivals page
-   - Extracts guest data from HTML cards
+### Add REST Sensor
 
-2. **SessionManager** - Session persistence:
-   - Saves cookies after successful login
-   - Loads cookies on subsequent runs
-   - Avoids repeated 2FA prompts
+Add to your `configuration.yaml`:
 
-3. **server.js** - REST API (Home Assistant integration):
-   - Express server on port 3000
-   - 10-minute auto-refresh with NodeCache
-   - Multiple endpoints for different data views
-   - Non-blocking refresh operations
+```yaml
+rest:
+  - resource: http://localhost:3000/api/guests
+    scan_interval: 600
+    sensor:
+      - name: "Pipangaille Guests"
+        unique_id: pipangaille_guests_count
+        value_template: "{{ value_json.count }}"
+        json_attributes:
+          - guests
+          - lastRefreshTime
+          - nextRefreshIn
 
-4. **cli.js** - One-time scraping:
-   - Interactive 2FA prompt
-   - Exports to JSON/TXT files
-   - Useful for manual checks
-
-### Target Page
-
-The scraper accesses the Amenitiz arrivals page:
-```
-https://domaine-de-pipangaille.amenitiz.io/fr/admin/booking-manager/arrivals
+      - name: "Pipangaille Last Update"
+        unique_id: pipangaille_last_update
+        value_template: "{{ value_json.lastRefreshTime }}"
 ```
 
-It extracts data from booking cards (`.check-in-out-card`):
-- Guest name
-- Room type
-- Number of persons
-- Amount due
-- Check-in/check-out dates
+Or using YAML UI:
 
-## 📚 Additional Documentation
+1. **Settings > Devices & Services > Integrations**
+2. Click **Create Automation**
+3. Search for **"REST Sensor"**
+4. Add configuration above
 
-- **[API.md](API.md)** - Complete REST API documentation
-  - All endpoints
-  - Home Assistant integration examples
-  - Production deployment guides
-  - Troubleshooting
+### Create Dashboard Card
 
-## 🔄 Auto-Refresh Behavior
+```yaml
+type: custom:auto-entities
+filter:
+  include:
+    - entity_id: sensor.pipangaille_guests*
+card:
+  type: entities
+  title: "Domaine de Pipangaille Guests"
+  show_header_toggle: false
+show_empty: false
+```
 
-When running in API mode (`npm start`):
-- Initial data fetch on startup
-- Auto-refresh every 10 minutes (600 seconds)
-- Data cached and served instantly via API
-- Background refresh doesn't block requests
-- Graceful error handling (continues running on failures)
+### Template Sensor (List All Guests)
 
-## 🐛 Troubleshooting
+```yaml
+template:
+  - sensor:
+      - name: "Pipangaille Guest Names"
+        unique_id: pipangaille_guest_names
+        state: "{{ state_attr('sensor.pipangaille_guests', 'guests') | length }}"
+        attributes:
+          guests: |
+            {% set guests = state_attr('sensor.pipangaille_guests', 'guests') %}
+            {% if guests %}
+              {% for guest in guests %}
+                - {{ guest.name }} ({{ guest.roomType }})
+              {% endfor %}
+            {% else %}
+              No guests
+            {% endif %}
+```
 
-### 2FA Not Working
+## 🔧 Troubleshooting
 
-If running as a background service, the 2FA prompt won't appear. Solution:
-1. Run manually first: `npm start`
-2. Enter 2FA code when prompted
-3. Session saved to `session/cookies.json`
-4. Service can now use saved session
+### 2FA Code Prompt Not Appearing
+
+**Problem:** Addon starts but immediately shows "2FA required but no code provider available"
+
+**Solution:**
+1. Stop the addon
+2. Check logs - note the 2FA requirement
+3. Unfortunately, addon environment can't provide interactive prompts
+4. **Option A:** Delete `/data/session/cookies.json` in addon data folder and restart (then check logs during startup)
+5. **Option B:** Run the CLI scraper on your computer first to save the session, then copy `session/cookies.json` to addon `/data/session/`
 
 ### Port Already in Use
 
-Change port in `.env`:
-```env
-PORT=3001
-```
+**Problem:** Addon fails to start - "Port 3000 already in use"
 
-### Data Not Refreshing
+**Solution:** Change the port in addon configuration:
+1. Settings > Add-ons > Domaine de Pipangaille
+2. Change "API Port" to 3001 or higher
+3. Save and restart
 
-Check server logs for errors. The API continues running even if refresh fails.
+### No Data Showing
 
-### Session Expired
+**Problem:** API endpoints return "Data not available yet"
 
-Delete session and restart:
-```bash
-rm -rf session/
-npm start
-```
+**Solution:**
+1. Check addon logs for errors
+2. Verify Amenitiz credentials are correct
+3. Wait 30-60 seconds for first data fetch
+4. If still failing, check Amenitiz website is accessible
+5. Try forcing a refresh: `curl -X POST http://localhost:3000/api/refresh`
 
-### Scraper Doesn't Find Guests
+### Session Expired / 2FA Prompt Loop
 
-1. Check credentials are correct in `.env`
-2. Enable `HEADLESS=false` and `SCREENSHOT=true` to see browser actions
-3. Review generated screenshots in `screenshots/`
-4. Verify Amenitiz hasn't changed their interface
+**Problem:** Addon keeps asking for 2FA code
 
-### Login Error
+**Solution:**
+1. Delete session data: Go to addon Info > Storage > delete `/data/session/`
+2. Restart addon
+3. Check logs during first startup
 
-- Verify Amenitiz dashboard URL is still correct
-- Check credentials are valid
-- Verify internet connection
+## 📊 Data Storage
+
+Addon stores data in Home Assistant `/data/` directory:
+- `/data/session/cookies.json` - Saved browser session
+- `/data/data/` - Exported guest data (auto-cleaned after N days)
+- `/data/screenshots/` - Debug screenshots (if enabled)
+
+All data persists through addon restarts and Home Assistant updates.
+
+## ⚙️ Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `amenitiz_email` | String | - | Your Amenitiz account email (required) |
+| `amenitiz_password` | String | - | Your Amenitiz account password (required) |
+| `port` | Integer | 3000 | REST API port (1-65535) |
+| `headless` | Boolean | true | Run browser in headless mode |
+| `screenshot` | Boolean | false | Save screenshots for debugging |
+| `data_retention_days` | Integer | 7 | Keep exported files for N days (0 = never delete) |
+
+## 🔐 Security
+
+- ✅ **Credentials are secure** - Home Assistant encrypts them
+- ✅ **Local network only** - API only accessible from your home network
+- ✅ **No cloud services** - Everything runs locally
+- ✅ **Session cookies are private** - Stored securely in addon data
+
+**⚠️ WARNING:** Never share your Home Assistant URL or addon IP externally!
+
+## 🔄 Auto-Refresh Behavior
+
+- **Interval:** 10 minutes (600 seconds)
+- **Initial fetch:** On addon startup
+- **Session reuse:** Avoids 2FA on subsequent refreshes
+- **Error handling:** Logs errors but continues running
+- **Cache:** Data served instantly, refreshed in background
+
+## 📝 Logs
+
+View addon logs in:
+**Settings > Add-ons > Domaine de Pipangaille > Logs**
+
+Common log messages:
+- `[INFO] Server running on http://localhost:3000` - Startup successful
+- `[INFO] Data refreshed successfully: X guests found` - Refresh completed
+- `[ERROR] Refresh failed: ...` - Login or scraping error
+- `[INFO] Cleanup: Removed X file(s)...` - Old data deleted
+
+## 🐛 Debug Mode
+
+For debugging, enable screenshots:
+
+1. Settings > Add-ons > Domaine de Pipangaille
+2. Set "Enable Screenshots" to **on**
+3. Save and restart
+
+Screenshots are saved to `/data/screenshots/` and visible in addon storage:
+- `1-login-form.png` - Login page
+- `2-after-login.png` - After login (may be 2FA page)
+- `2b-2fa-code.png` - 2FA code entry
+- `3-dashboard.png` - Logged-in dashboard
+- `3-arrivals.png` - Arrivals page with guest data
+
+## 📞 Support
+
+For issues or feature requests:
+- Check logs first
+- Try troubleshooting steps above
+- Visit GitHub: https://github.com/yourusername/domaine-de-pipangaille-rooms-scraping
 
 ## 📄 License
 
 ISC
 
+---
+
+**Developed for:** Domaine de Pipangaille
+**Platform:** Home Assistant
+**Status:** Stable
