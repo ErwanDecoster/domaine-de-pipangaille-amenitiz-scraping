@@ -1,0 +1,7 @@
+rootfs/app/node_modules/
+rootfs/app/.npm/
+.git/
+**/*.tar.gz
+Dockerfile
+.dockerignore
+.github/
