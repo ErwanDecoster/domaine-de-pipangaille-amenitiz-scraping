@@ -35,7 +35,6 @@ arch:
   - amd64
   - i386
 homeassistant: 2024.1.0
-host_network: true
 privileged: []
 environment:
   NODE_ENV: production
