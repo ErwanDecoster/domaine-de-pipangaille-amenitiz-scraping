@@ -133,7 +133,7 @@ function scheduleRetry() {
 /**
  * Fetches fresh data from Amenitiz
  */
-async function refreshData() {
+async function refreshData(isMandatory = false) {
   if (isRefreshing) {
     console.log('[INFO] Refresh already in progress, skipping...');
     return;

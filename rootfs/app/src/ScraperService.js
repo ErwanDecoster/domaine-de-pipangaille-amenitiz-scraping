@@ -174,65 +174,65 @@ export class ScraperService {
     await this.delay(2000);
   }
 
-  async fetchGuests() {
-    await this.page.goto('https://domaine-de-pipangaille.amenitiz.io/fr/admin/booking-manager/arrivals', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    });
-
+  async scrapeCardsFromPage(url, status, screenshotName) {
+    await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
     await this.delay(3000);
-    
+
     try {
       await this.page.waitForSelector('.check-in-out-card', { timeout: 10000 });
     } catch (e) {
-      // No cards found
+      // No cards found on this page
     }
-    
-    await this.delay(2000);
-    await this.takeScreenshot('3-arrivals.png');
 
-    const guests = await this.page.evaluate(() => {
+    await this.delay(2000);
+    await this.takeScreenshot(screenshotName);
+
+    return this.page.evaluate((status) => {
       const results = [];
-      const bookingCards = document.querySelectorAll('.check-in-out-card');
-      
-      bookingCards.forEach(card => {
-        const nameElement = card.querySelector('.check-in-out-card-title p');
-        const name = nameElement?.textContent.trim() || '';
-        
-        const roomElement = card.querySelector('.check-in-out-card-room p');
-        let roomType = '';
-        if (roomElement) {
-          const match = roomElement.textContent.trim().match(/\(\d+\)\s*(.+)$/);
-          roomType = match ? match[1].trim() : roomElement.textContent.trim();
-        }
-        
+      document.querySelectorAll('.check-in-out-card').forEach(card => {
+        const name = card.querySelector('.check-in-out-card-title p')?.textContent.trim() || '';
+        if (!name) return;
+
+        const roomRaw = card.querySelector('.check-in-out-card-room p')?.textContent.trim() || '';
+        const roomMatch = roomRaw.match(/\(\d+\)\s*(.+)$/);
+        const roomType = roomMatch ? roomMatch[1].trim() : roomRaw;
+
         const dates = card.querySelector('.check-in-out-card-date')?.textContent.trim() || '';
-        
-        const personsElement = card.querySelector('.card-info.u-flex.pb2 .size0');
-        const persons = personsElement?.textContent.match(/(\d+)\s*x/)?.[1] || '';
-        
-        let amount = '';
+        const persons = card.querySelector('.card-info.u-flex.pb2 .size0')?.textContent.match(/(\d+)\s*x/)?.[1] || '';
+
+        let amountDue = '';
         card.querySelectorAll('.card-info p').forEach(p => {
           if (p.textContent.includes('Montant dû:')) {
-            amount = p.querySelector('strong')?.textContent.trim() || '';
+            amountDue = p.querySelector('strong')?.textContent.trim() || '';
           }
         });
-        
-        if (name) {
-          results.push({
-            name: name,
-            roomType: roomType,
-            persons: persons,
-            amountDue: amount,
-            dates: dates
-          });
-        }
-      });
-      
-      return results;
-    });
 
-    return guests;
+        results.push({ name, roomType, persons, amountDue, dates, status });
+      });
+      return results;
+    }, status);
+  }
+
+  async fetchGuests() {
+    const base = 'https://domaine-de-pipangaille.amenitiz.io/fr/admin/booking-manager';
+
+    const arrivals = await this.scrapeCardsFromPage(
+      `${base}/arrivals`, 'arriving', '3-arrivals.png'
+    );
+    const inHouse = await this.scrapeCardsFromPage(
+      `${base}/stay-overs`, 'stay-overs', '4-in-house.png'
+    );
+
+    // Merge, deduplicate by name + roomType (arrival may also appear in in-house)
+    const seen = new Set(arrivals.map(g => `${g.name}|${g.roomType}`));
+    const merged = [...arrivals];
+    for (const g of inHouse) {
+      if (!seen.has(`${g.name}|${g.roomType}`)) {
+        merged.push(g);
+      }
+    }
+
+    return merged;
   }
 
   async cleanupData() {
