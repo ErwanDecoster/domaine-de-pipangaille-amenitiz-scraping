@@ -42,20 +42,56 @@ let retryAttempts = 0;            // Counter for retry attempts
 const MAX_RETRY_ATTEMPTS = 2;     // Maximum retry attempts (5 and 10 min)
 const RETRY_INTERVALS = [5 * 60 * 1000, 10 * 60 * 1000]; // 5 and 10 minutes
 
-// Refresh interval: 10 minutes
-const REFRESH_INTERVAL = 10 * 60 * 1000;
+// Time-based refresh schedule (intervals in minutes, hours in 0-23)
+const REFRESH_SCHEDULE = {
+  night:     { start: parseInt(process.env.REFRESH_NIGHT_START)     || 22, interval: (parseInt(process.env.REFRESH_NIGHT_INTERVAL)     || 180) * 60 * 1000 },
+  morning:   { start: parseInt(process.env.REFRESH_MORNING_START)   || 8,  interval: (parseInt(process.env.REFRESH_MORNING_INTERVAL)   || 30)  * 60 * 1000 },
+  afternoon: { start: parseInt(process.env.REFRESH_AFTERNOON_START) || 14, interval: (parseInt(process.env.REFRESH_AFTERNOON_INTERVAL) || 10)  * 60 * 1000 },
+};
+
+let autoRefreshTimer = null;
+
+/**
+ * Returns the current refresh interval in ms based on time of day
+ */
+function getCurrentRefreshInterval() {
+  const hour = new Date().getHours();
+  const { night, morning, afternoon } = REFRESH_SCHEDULE;
+
+  if (hour >= afternoon.start && hour < night.start) return afternoon.interval; // 14h-22h
+  if (hour >= morning.start && hour < afternoon.start) return morning.interval; // 08h-14h
+  return night.interval;                                                         // 22h-08h
+}
+
+function getCurrentPeriodName() {
+  const hour = new Date().getHours();
+  const { night, morning, afternoon } = REFRESH_SCHEDULE;
+  if (hour >= afternoon.start && hour < night.start) return 'après-midi/soirée';
+  if (hour >= morning.start && hour < afternoon.start) return 'matin';
+  return 'nuit';
+}
+
+/**
+ * Schedules the next auto-refresh based on current time period
+ */
+function scheduleNextAutoRefresh() {
+  if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
+  const interval = getCurrentRefreshInterval();
+  const minutes = Math.round(interval / 60 / 1000);
+  console.log(`[INFO] Prochain refresh dans ${minutes} min (période: ${getCurrentPeriodName()})`);
+  autoRefreshTimer = setTimeout(async () => {
+    await refreshData();
+    scheduleNextAutoRefresh();
+  }, interval);
+}
 
 /**
  * Calculates seconds until the next refresh
  */
 function getSecondsUntilNextRefresh() {
-  if (!lastRefreshTimestamp) {
-    return REFRESH_INTERVAL / 1000;
-  }
-  
-  const elapsedMs = Date.now() - lastRefreshTimestamp;
-  const remainingMs = Math.max(0, REFRESH_INTERVAL - elapsedMs);
-  return Math.ceil(remainingMs / 1000);
+  if (!lastRefreshTimestamp) return Math.round(getCurrentRefreshInterval() / 1000);
+  const elapsed = Date.now() - lastRefreshTimestamp;
+  return Math.ceil(Math.max(0, getCurrentRefreshInterval() - elapsed) / 1000);
 }
 
 /**
@@ -386,7 +422,7 @@ process.on('SIGINT', async () => {
 // Start server
 const server = app.listen(port, async () => {
   console.log(`[INFO] Server running on http://localhost:${port}`);
-  console.log(`[INFO] Auto-refresh interval: ${REFRESH_INTERVAL / 1000} seconds (10 minutes)`);
+  console.log(`[INFO] Refresh schedule: nuit=${REFRESH_SCHEDULE.night.interval/60000}min (à partir de ${REFRESH_SCHEDULE.night.start}h), matin=${REFRESH_SCHEDULE.morning.interval/60000}min (à partir de ${REFRESH_SCHEDULE.morning.start}h), après-midi=${REFRESH_SCHEDULE.afternoon.interval/60000}min (à partir de ${REFRESH_SCHEDULE.afternoon.start}h)`);
   console.log('[INFO] Available endpoints:');
   console.log(`[INFO]   GET  http://localhost:${port}/api/guests   - Get all guests`);
   console.log(`[INFO]   GET  http://localhost:${port}/api/rooms    - Get guests by room`);
@@ -394,14 +430,13 @@ const server = app.listen(port, async () => {
   console.log(`[INFO]   GET  http://localhost:${port}/api/health   - Health check`);
   console.log(`[INFO]   POST http://localhost:${port}/api/refresh  - Force refresh`);
   console.log(`[INFO]   POST http://localhost:${port}/api/2fa      - Submit 2FA code`);
-  
+
   // Initial data fetch
   console.log('[INFO] Starting initial data fetch...');
   await refreshData();
-  
-  // Set up auto-refresh interval
-  setInterval(refreshData, REFRESH_INTERVAL);
-  console.log('[INFO] Auto-refresh scheduled');
+
+  // Set up dynamic auto-refresh
+  scheduleNextAutoRefresh();
 });
 
 export default app;

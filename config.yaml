@@ -21,6 +21,13 @@ options:
   headless: true
   screenshot: false
   data_retention_days: 7
+  refresh_night_interval: 180
+  refresh_morning_interval: 30
+  refresh_afternoon_interval: 10
+  refresh_evening_interval: 30
+  refresh_night_start: 22
+  refresh_morning_start: 8
+  refresh_afternoon_start: 14
 schema:
   amenitiz_email: str
   amenitiz_password: password
@@ -28,6 +35,13 @@ schema:
   headless: bool
   screenshot: bool?
   data_retention_days: int(0,365)?
+  refresh_night_interval: int(5,720)?
+  refresh_morning_interval: int(5,720)?
+  refresh_afternoon_interval: int(1,720)?
+  refresh_evening_interval: int(5,720)?
+  refresh_night_start: int(0,23)?
+  refresh_morning_start: int(0,23)?
+  refresh_afternoon_start: int(0,23)?
 arch:
   - armhf
   - armv7
@@ -35,6 +49,7 @@ arch:
   - amd64
   - i386
 homeassistant: 2024.1.0
+host_network: true
 privileged: []
 environment:
   NODE_ENV: production
