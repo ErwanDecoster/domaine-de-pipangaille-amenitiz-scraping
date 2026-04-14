@@ -95,6 +95,7 @@ const REFRESH_SCHEDULE = {
   night:     { start: Number.parseInt(process.env.REFRESH_NIGHT_START)     || 22, interval: (Number.parseInt(process.env.REFRESH_NIGHT_INTERVAL)     || 180) * 60 * 1000 },
   morning:   { start: Number.parseInt(process.env.REFRESH_MORNING_START)   || 8,  interval: (Number.parseInt(process.env.REFRESH_MORNING_INTERVAL)   || 30)  * 60 * 1000 },
   afternoon: { start: Number.parseInt(process.env.REFRESH_AFTERNOON_START) || 14, interval: (Number.parseInt(process.env.REFRESH_AFTERNOON_INTERVAL) || 10)  * 60 * 1000 },
+  evening:   { start: Number.parseInt(process.env.REFRESH_EVENING_START)   || 18, interval: (Number.parseInt(process.env.REFRESH_EVENING_INTERVAL)   || 30)  * 60 * 1000 },
 };
 
 let autoRefreshTimer = null;
@@ -104,17 +105,19 @@ let autoRefreshTimer = null;
  */
 function getCurrentRefreshInterval() {
   const hour = new Date().getHours();
-  const { night, morning, afternoon } = REFRESH_SCHEDULE;
+  const { night, morning, afternoon, evening } = REFRESH_SCHEDULE;
 
-  if (hour >= afternoon.start && hour < night.start) return afternoon.interval; // 14h-22h
+  if (hour >= evening.start && hour < night.start) return evening.interval;     // 18h-22h
+  if (hour >= afternoon.start && hour < evening.start) return afternoon.interval; // 14h-18h
   if (hour >= morning.start && hour < afternoon.start) return morning.interval; // 08h-14h
   return night.interval;                                                         // 22h-08h
 }
 
 function getCurrentPeriodName() {
   const hour = new Date().getHours();
-  const { night, morning, afternoon } = REFRESH_SCHEDULE;
-  if (hour >= afternoon.start && hour < night.start) return 'après-midi/soirée';
+  const { night, morning, afternoon, evening } = REFRESH_SCHEDULE;
+  if (hour >= evening.start && hour < night.start) return 'soirée';
+  if (hour >= afternoon.start && hour < evening.start) return 'après-midi';
   if (hour >= morning.start && hour < afternoon.start) return 'matin';
   return 'nuit';
 }
@@ -473,7 +476,7 @@ process.on('SIGINT', async () => {
 // Start server
 const server = app.listen(port, async () => {
   console.log(`[INFO] Server running on http://localhost:${port}`);
-  console.log(`[INFO] Refresh schedule: nuit=${REFRESH_SCHEDULE.night.interval/60000}min (à partir de ${REFRESH_SCHEDULE.night.start}h), matin=${REFRESH_SCHEDULE.morning.interval/60000}min (à partir de ${REFRESH_SCHEDULE.morning.start}h), après-midi=${REFRESH_SCHEDULE.afternoon.interval/60000}min (à partir de ${REFRESH_SCHEDULE.afternoon.start}h)`);
+  console.log(`[INFO] Refresh schedule: nuit=${REFRESH_SCHEDULE.night.interval/60000}min (à partir de ${REFRESH_SCHEDULE.night.start}h), matin=${REFRESH_SCHEDULE.morning.interval/60000}min (à partir de ${REFRESH_SCHEDULE.morning.start}h), après-midi=${REFRESH_SCHEDULE.afternoon.interval/60000}min (à partir de ${REFRESH_SCHEDULE.afternoon.start}h), soirée=${REFRESH_SCHEDULE.evening.interval/60000}min (à partir de ${REFRESH_SCHEDULE.evening.start}h)`);
   console.log('[INFO] Available endpoints:');
   console.log(`[INFO]   GET  http://localhost:${port}/api/guests   - Get all guests`);
   console.log(`[INFO]   GET  http://localhost:${port}/api/rooms    - Get guests by room`);
