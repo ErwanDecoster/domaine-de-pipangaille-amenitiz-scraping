@@ -120,10 +120,18 @@ function getCurrentPeriodName() {
 }
 
 /**
- * Schedules the next auto-refresh based on current time period
+ * Schedules the next auto-refresh based on current time period.
+ * Skipped if a retry is already scheduled to avoid double execution.
  */
 function scheduleNextAutoRefresh() {
   if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
+
+  // Don't schedule if a retry is already pending
+  if (retryScheduled) {
+    console.log('[INFO] Retry en attente, auto-refresh suspendu jusqu\'à son issue.');
+    return;
+  }
+
   const interval = getCurrentRefreshInterval();
   const minutes = Math.round(interval / 60 / 1000);
   console.log(`[INFO] Prochain refresh dans ${minutes} min (période: ${getCurrentPeriodName()})`);
@@ -203,14 +211,19 @@ function scheduleRetry() {
   if (retryAttempts < MAX_RETRY_ATTEMPTS) {
     const delayMs = RETRY_INTERVALS[retryAttempts];
     const delayMinutes = delayMs / 60 / 1000;
-    
+
     console.log(`[INFO] Scheduling automatic retry #${retryAttempts + 1} in ${delayMinutes} minutes...`);
-    
+
     retryScheduled = setTimeout(() => {
       retryAttempts++;
       console.log(`[INFO] Attempting automatic retry #${retryAttempts} (${delayMinutes} minutes after failure)...`);
       refreshData();
     }, delayMs);
+  } else {
+    // Retries exhausted — resume normal auto-refresh schedule
+    retryScheduled = null;
+    console.log('[INFO] Retries épuisés. Reprise du scheduler automatique.');
+    scheduleNextAutoRefresh();
   }
 }
 
@@ -244,10 +257,11 @@ async function refreshData() {
     lastError = null;
     retryAttempts = 0;
     
-    // Cancel any scheduled retry
+    // Cancel any scheduled retry and resume normal auto-refresh
     if (retryScheduled) {
       clearTimeout(retryScheduled);
       retryScheduled = null;
+      scheduleNextAutoRefresh();
     }
     
     // Clear 2FA state on success

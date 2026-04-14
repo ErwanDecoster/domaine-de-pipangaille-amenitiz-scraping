@@ -67,10 +67,10 @@ export class ScraperService {
       throw new Error('AMENITIZ_EMAIL and AMENITIZ_PASSWORD must be defined');
     }
 
-    await this.page.goto(AMENITIZ_LOGIN_URL, { waitUntil: 'networkidle2' });
-    
+    await this.page.goto(AMENITIZ_LOGIN_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
     if (await this.sessionManager.loadCookies(this.page)) {
-      await this.page.reload({ waitUntil: 'networkidle2' });
+      await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
       
       if (await this.checkIfLoggedIn()) {
         return;
@@ -175,7 +175,7 @@ export class ScraperService {
   }
 
   async scrapeCardsFromPage(url, status, screenshotName) {
-    await this.page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await this.delay(3000);
 
     try {
