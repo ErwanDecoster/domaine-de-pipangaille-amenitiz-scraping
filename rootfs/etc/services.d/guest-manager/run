@@ -13,6 +13,15 @@ PORT=$(bashio::config 'port')
 HEADLESS=$(bashio::config 'headless')
 SCREENSHOT=$(bashio::config 'screenshot')
 DATA_RETENTION_DAYS=$(bashio::config 'data_retention_days')
+CACHE_MAX_AGE_HOURS=$(bashio::config 'cache_max_age_hours')
+REFRESH_NIGHT_START=$(bashio::config 'refresh_night_start')
+REFRESH_NIGHT_INTERVAL=$(bashio::config 'refresh_night_interval')
+REFRESH_MORNING_START=$(bashio::config 'refresh_morning_start')
+REFRESH_MORNING_INTERVAL=$(bashio::config 'refresh_morning_interval')
+REFRESH_AFTERNOON_START=$(bashio::config 'refresh_afternoon_start')
+REFRESH_AFTERNOON_INTERVAL=$(bashio::config 'refresh_afternoon_interval')
+REFRESH_EVENING_START=$(bashio::config 'refresh_evening_start')
+REFRESH_EVENING_INTERVAL=$(bashio::config 'refresh_evening_interval')
 
 # Export environment variables for Node.js
 export AMENITIZ_EMAIL
@@ -21,6 +30,15 @@ export PORT
 export HEADLESS
 export SCREENSHOT
 export DATA_RETENTION_DAYS
+export CACHE_MAX_AGE_HOURS
+export REFRESH_NIGHT_START
+export REFRESH_NIGHT_INTERVAL
+export REFRESH_MORNING_START
+export REFRESH_MORNING_INTERVAL
+export REFRESH_AFTERNOON_START
+export REFRESH_AFTERNOON_INTERVAL
+export REFRESH_EVENING_START
+export REFRESH_EVENING_INTERVAL
 export NODE_ENV=production
 export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
@@ -30,6 +48,11 @@ bashio::log.info "🔌 Port: ${PORT}"
 bashio::log.info "🖥️  Headless: ${HEADLESS}"
 bashio::log.info "📸 Screenshots: ${SCREENSHOT}"
 bashio::log.info "🗑️  Data retention: ${DATA_RETENTION_DAYS} days"
+bashio::log.info "⏱️  Cache max age: ${CACHE_MAX_AGE_HOURS}h"
+bashio::log.info "🌙 Night: ${REFRESH_NIGHT_START}h, interval ${REFRESH_NIGHT_INTERVAL}min"
+bashio::log.info "🌅 Morning: ${REFRESH_MORNING_START}h, interval ${REFRESH_MORNING_INTERVAL}min"
+bashio::log.info "☀️  Afternoon: ${REFRESH_AFTERNOON_START}h, interval ${REFRESH_AFTERNOON_INTERVAL}min"
+bashio::log.info "🌆 Evening: ${REFRESH_EVENING_START}h, interval ${REFRESH_EVENING_INTERVAL}min"
 
 # Warn if credentials not configured
 if bashio::var.is_empty "${AMENITIZ_EMAIL}" || bashio::var.is_empty "${AMENITIZ_PASSWORD}"; then
