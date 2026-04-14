@@ -28,6 +28,7 @@ options:
   refresh_night_start: 22
   refresh_morning_start: 8
   refresh_afternoon_start: 14
+  cache_max_age_hours: 12
 schema:
   amenitiz_email: str
   amenitiz_password: password
@@ -40,6 +41,7 @@ schema:
   refresh_afternoon_interval: int(1,720)?
   refresh_evening_interval: int(5,720)?
   refresh_night_start: int(0,23)?
+  cache_max_age_hours: int(1,168)?
   refresh_morning_start: int(0,23)?
   refresh_afternoon_start: int(0,23)?
 arch:

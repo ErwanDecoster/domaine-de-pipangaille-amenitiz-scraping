@@ -3,9 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import NodeCache from 'node-cache';
 import { ScraperService } from './ScraperService.js';
-import readline from 'readline';
-import fs from 'fs';
-import path from 'path';
+import readline from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,8 +21,57 @@ const SESSION_DIR = process.env.SESSION_DIR || '/data/session';
   }
 });
 
-// Cache with 10-minute TTL (600 seconds)
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+// Cache without TTL — we manage expiry manually via persisted state
+const cache = new NodeCache({ stdTTL: 0, checkperiod: 0 });
+
+// Max age for persisted data (hours). After this, stale data is discarded on startup.
+const CACHE_MAX_AGE_HOURS = Number.parseInt(process.env.CACHE_MAX_AGE_HOURS) || 12;
+const PERSISTED_STATE_FILE = path.join(DATA_DIR, 'last_known_state.json');
+
+/**
+ * Saves current cache to disk after a successful refresh
+ */
+function persistState(guests) {
+  try {
+    const state = {
+      guests,
+      rooms: extractRoomData(guests),
+      savedAt: new Date().toISOString(),
+      savedAtTimestamp: Date.now()
+    };
+    fs.writeFileSync(PERSISTED_STATE_FILE, JSON.stringify(state, null, 2));
+  } catch (err) {
+    console.warn(`[WARN] Could not persist state to disk: ${err.message}`);
+  }
+}
+
+/**
+ * Loads last known state from disk on startup if recent enough
+ */
+function loadPersistedState() {
+  try {
+    if (!fs.existsSync(PERSISTED_STATE_FILE)) return false;
+
+    const state = JSON.parse(fs.readFileSync(PERSISTED_STATE_FILE, 'utf8'));
+    const ageHours = (Date.now() - state.savedAtTimestamp) / 3600000;
+
+    if (ageHours > CACHE_MAX_AGE_HOURS) {
+      console.log(`[INFO] Persisted state is too old (${ageHours.toFixed(1)}h > ${CACHE_MAX_AGE_HOURS}h), ignoring.`);
+      return false;
+    }
+
+    cache.set('guests', state.guests);
+    cache.set('rooms', state.rooms);
+    lastRefreshTime = state.savedAt;
+    lastRefreshTimestamp = state.savedAtTimestamp;
+
+    console.log(`[INFO] Loaded persisted state from disk (${ageHours.toFixed(1)}h ago): ${state.guests.length} guests`);
+    return true;
+  } catch (err) {
+    console.warn(`[WARN] Could not load persisted state: ${err.message}`);
+    return false;
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -36,7 +85,6 @@ let lastError = null;
 let twoFARequired = false;
 let twoFAResolver = null;
 let twoFATimeoutId = null;
-let autoRefreshDisabled = false;  // Flag to disable auto-refresh until manual intervention
 let retryScheduled = null;        // Track scheduled retry attempt
 let retryAttempts = 0;            // Counter for retry attempts
 const MAX_RETRY_ATTEMPTS = 2;     // Maximum retry attempts (5 and 10 min)
@@ -44,9 +92,9 @@ const RETRY_INTERVALS = [5 * 60 * 1000, 10 * 60 * 1000]; // 5 and 10 minutes
 
 // Time-based refresh schedule (intervals in minutes, hours in 0-23)
 const REFRESH_SCHEDULE = {
-  night:     { start: parseInt(process.env.REFRESH_NIGHT_START)     || 22, interval: (parseInt(process.env.REFRESH_NIGHT_INTERVAL)     || 180) * 60 * 1000 },
-  morning:   { start: parseInt(process.env.REFRESH_MORNING_START)   || 8,  interval: (parseInt(process.env.REFRESH_MORNING_INTERVAL)   || 30)  * 60 * 1000 },
-  afternoon: { start: parseInt(process.env.REFRESH_AFTERNOON_START) || 14, interval: (parseInt(process.env.REFRESH_AFTERNOON_INTERVAL) || 10)  * 60 * 1000 },
+  night:     { start: Number.parseInt(process.env.REFRESH_NIGHT_START)     || 22, interval: (Number.parseInt(process.env.REFRESH_NIGHT_INTERVAL)     || 180) * 60 * 1000 },
+  morning:   { start: Number.parseInt(process.env.REFRESH_MORNING_START)   || 8,  interval: (Number.parseInt(process.env.REFRESH_MORNING_INTERVAL)   || 30)  * 60 * 1000 },
+  afternoon: { start: Number.parseInt(process.env.REFRESH_AFTERNOON_START) || 14, interval: (Number.parseInt(process.env.REFRESH_AFTERNOON_INTERVAL) || 10)  * 60 * 1000 },
 };
 
 let autoRefreshTimer = null;
@@ -161,7 +209,7 @@ function scheduleRetry() {
     retryScheduled = setTimeout(() => {
       retryAttempts++;
       console.log(`[INFO] Attempting automatic retry #${retryAttempts} (${delayMinutes} minutes after failure)...`);
-      refreshData(true);
+      refreshData();
     }, delayMs);
   }
 }
@@ -169,7 +217,7 @@ function scheduleRetry() {
 /**
  * Fetches fresh data from Amenitiz
  */
-async function refreshData(isMandatory = false) {
+async function refreshData() {
   if (isRefreshing) {
     console.log('[INFO] Refresh already in progress, skipping...');
     return;
@@ -189,12 +237,12 @@ async function refreshData(isMandatory = false) {
     
     cache.set('guests', guests);
     cache.set('rooms', extractRoomData(guests));
-    
+    persistState(guests);
+
     lastRefreshTime = new Date().toISOString();
     lastRefreshTimestamp = Date.now();
     lastError = null;
-    autoRefreshDisabled = false;   // Re-enable auto-refresh on success
-    retryAttempts = 0;             // Reset retry counter on success
+    retryAttempts = 0;
     
     // Cancel any scheduled retry
     if (retryScheduled) {
@@ -224,17 +272,9 @@ async function refreshData(isMandatory = false) {
       console.log(`[INFO] Keeping previous data: ${currentGuests.length} guests`);
     }
     
-    // Disable auto-refresh on any failure
-    if (isMandatory) {
-      autoRefreshDisabled = true;
-      console.error('[ERROR] Auto-refresh disabled due to failure. Use POST /api/refresh to retry manually.');
-      
-      // Schedule automatic retries
-      scheduleRetry();
-    } else {
-      autoRefreshDisabled = true;
-    }
-    
+    // Schedule automatic retries on failure
+    scheduleRetry();
+
     // Clear 2FA state on failure
     if (twoFATimeoutId) {
       clearTimeout(twoFATimeoutId);
@@ -321,9 +361,6 @@ app.get('/api/status', (req, res) => {
   let nextRetryIn = null;
   
   if (retryScheduled) {
-    // Calculate time until next retry
-    const now = Date.now();
-    // We don't have the exact scheduled time, so we estimate based on attempts
     if (retryAttempts < MAX_RETRY_ATTEMPTS) {
       const delayMs = RETRY_INTERVALS[retryAttempts];
       nextRetryIn = Math.ceil(delayMs / 1000);
@@ -430,6 +467,9 @@ const server = app.listen(port, async () => {
   console.log(`[INFO]   GET  http://localhost:${port}/api/health   - Health check`);
   console.log(`[INFO]   POST http://localhost:${port}/api/refresh  - Force refresh`);
   console.log(`[INFO]   POST http://localhost:${port}/api/2fa      - Submit 2FA code`);
+
+  // Restore last known state from disk before first scrape
+  loadPersistedState();
 
   // Initial data fetch
   console.log('[INFO] Starting initial data fetch...');

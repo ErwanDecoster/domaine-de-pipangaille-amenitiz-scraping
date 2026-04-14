@@ -47,6 +47,7 @@ refresh_evening_interval="${REFRESH_EVENING_INTERVAL:-$refresh_evening_interval}
 refresh_night_start="${REFRESH_NIGHT_START:-$refresh_night_start}"
 refresh_morning_start="${REFRESH_MORNING_START:-$refresh_morning_start}"
 refresh_afternoon_start="${REFRESH_AFTERNOON_START:-$refresh_afternoon_start}"
+cache_max_age_hours="${CACHE_MAX_AGE_HOURS:-$cache_max_age_hours}"
 
 # Warn if credentials not configured
 if [ -z "$amenitiz_email" ] || [ -z "$amenitiz_password" ]; then
@@ -68,6 +69,7 @@ export REFRESH_EVENING_INTERVAL="$refresh_evening_interval"
 export REFRESH_NIGHT_START="$refresh_night_start"
 export REFRESH_MORNING_START="$refresh_morning_start"
 export REFRESH_AFTERNOON_START="$refresh_afternoon_start"
+export CACHE_MAX_AGE_HOURS="$cache_max_age_hours"
 
 # Log startup info
 echo "🚀 Starting Domaine de Pipangaille Guest Manager"
